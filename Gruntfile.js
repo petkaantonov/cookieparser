@@ -153,8 +153,10 @@ module.exports = function( grunt ) {
     });
 
     grunt.registerTask( "testrun", function() {
+        var fs = require("fs");
         var done = this.async();
         var Mocha = require("mocha");
+
         var mochaOpts = {
             reporter: "spec",
             timeout: 500,
@@ -162,7 +164,11 @@ module.exports = function( grunt ) {
         };
 
         var mocha = new Mocha(mochaOpts);
-        mocha.addFile("./test/test.js");
+
+        fs.readdirSync("./test").forEach(function(fileName) {
+            mocha.addFile("./test/" + fileName);
+        });
+
         mocha.run(function(err){
             if( err ) {
                 process.stderr.write(test.title + "\n" + err.stack + "\n");

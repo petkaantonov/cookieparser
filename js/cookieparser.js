@@ -34,9 +34,15 @@ function placeKeyValue(str, dictionary, keyStart,
 
 
     var key = keyStart === keyEnd ? "" :
-        str.substr(trimForward(str, keyStart), trimBackward(str, keyEnd));
+        str.substring(
+            trimForward(str, keyStart),
+            trimBackward(str, keyEnd) + 1
+        );
     var value = valueStart === valueEnd ? "" :
-        str.substr(trimForward(str, valueStart), trimBackward(str, valueEnd));
+        str.substring(
+            trimForward(str, valueStart),
+            trimBackward(str, valueEnd) + 1
+        );
 
     if( void 0 === dictionary[key] ) {
         dictionary[key] = valueMightNeedDecoding
@@ -169,10 +175,13 @@ function parse(str) {
     }
 
     if (mode !== 1) {
-        if(mode === 34) {
-            var j = trimBackward(str, i - 2);
+        if (mode === 4) {
+            var j = trimBackward(str, i - 1);
             valueEnd = j - 1;
             if(valueEnd < valueStart) valueStart = valueEnd;
+        }
+        else {
+            valueEnd++;
         }
         placeKeyValue(str, dictionary, keyStart, keyEnd,
                 valueStart, valueEnd, valueMightNeedDecoding);
@@ -180,9 +189,6 @@ function parse(str) {
     return dictionary;
 }
 
-function slowParse(str, decoder) {
-    throw new Error("slowParse not implemented", decoder, str);
-}
 
 function serialize() {
 
@@ -192,3 +198,33 @@ module.exports = {
     parse: parse,
     serialize: serialize
 };
+
+function slowParse(str, dec) {
+    var obj = {};
+    var pairs = str.split(/[;,] */);
+
+    pairs.forEach(function(pair) {
+        var eq_idx = pair.indexOf("=");
+
+        if (eq_idx < 0) {
+            return;
+        }
+
+        var key = pair.substr(0, eq_idx).trim();
+        var val = pair.substr(++eq_idx, pair.length).trim();
+
+        if ("\"" == val[0]) {
+            val = val.slice(1, -1);
+        }
+
+        if (undefined == obj[key]) {
+            try {
+                obj[key] = dec(val);
+            } catch (e) {
+                obj[key] = val;
+            }
+        }
+    });
+
+    return obj;
+}
