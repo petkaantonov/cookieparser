@@ -57,120 +57,86 @@ function parse(str) {
     var valueStart = 0;
     var valueEnd = 0;
     var valueMightNeedDecoding = false;
-    var mode = KEY;
+    var isQuote = false;
     var i = 0;
-
+    var len = str.length;
     //reset values
-    for( var len = str.length; i < len; ++i ) {
+    mainloop: for (; i < len; ++i ) {
         var ch = str.charCodeAt(i);
         if (ch > MAX_ASCII) {
             return slowParse(str, decode);
         }
-        switch(mode) {
-        case KEY:
-            if (ch === EQUALS) {
-                mode = VALUE_START;
-            }
-            else if (ch === SCOLON ||
-                     ch === COMMA) {
-                keyEnd = keyStart = i + 1;
-            }
-            else {
-                keyEnd = i;
-            }
-            break;
-
-        case VALUE_START:
-            valueStart = valueEnd = i;
+        else if (ch === EQUALS) {
+            keyEnd = i - 1;
+            var j = i + 1;
+            ch = str.charCodeAt(j);
             if (ch === QUOTE) {
-                valueStart = valueEnd = i + 1;
-                mode = STRING;
-                break;
+                j++;
+                isQuote = true;
             }
-            //Character is part of value - fall through
-            mode = VALUE;
-        /* falls through */
-        case VALUE:
-            if (ch === PCT) {
-                valueMightNeedDecoding = true;
-            }
-            if (ch === SCOLON ||
-                ch === COMMA) {
-                var key = extract(str, keyStart, keyEnd);
-                var value = extract(str, valueStart, valueEnd);
-
-                dictionary[key] = valueMightNeedDecoding
-                    ? decode(value)
-                    : value;
-                valueMightNeedDecoding = false;
-                var j = i;
-                for (; j < len; ++j) {
-                    if (str.charCodeAt(j) !== SPACE) {
-                        i = j - 1;
-                        break;
-                    }
+            valueStart = j;
+            for(; j < len; ++j) {
+                ch = str.charCodeAt(j);
+                if( ch === PCT ) {
+                    valueMightNeedDecoding = true;
                 }
-                keyEnd = keyStart = i + 1;
-                mode = KEY;
-            }
-            else {
-                valueEnd = i;
-            }
-            break;
+                else if (ch === SCOLON ||
+                        ch === COMMA) {
+                    if (isQuote) {
+                        var k = trimBackward(str, j - 1);
+                        valueEnd = k - 1;
+                        if(valueEnd < valueStart) valueStart = valueEnd;
+                    }
+                    else {
+                        valueEnd = j - 1;
+                    }
 
-        case STRING:
-            if (ch === PCT) {
-                valueMightNeedDecoding = true;
+                    var key = extract(str, keyStart, keyEnd);
+                    var value = extract(str, valueStart, valueEnd);
+
+                    dictionary[key] = valueMightNeedDecoding
+                        ? decode(value)
+                        : value;
+
+                    i = j;
+                    for (; j < len; ++j) {
+                        if (str.charCodeAt(j) !== SPACE) {
+                            i = j - 1;
+                            break;
+                        }
+                    }
+                    keyEnd = keyStart = i + 1;
+                    isQuote = false;
+                    valueMightNeedDecoding = false;
+                    continue mainloop;
+                }
+
             }
-            if (ch === SCOLON ||
-                ch === COMMA) {
-                var j = trimBackward(str, i - 1);
-                valueEnd = j - 1;
+            if (isQuote) {
+                var k = trimBackward(str, j - 1);
+                valueEnd = k - 1;
                 if(valueEnd < valueStart) valueStart = valueEnd;
-
-                var key = extract(str, keyStart, keyEnd);
-                var value = extract(str, valueStart, valueEnd);
-
-                dictionary[key] = valueMightNeedDecoding
-                    ? decode(value)
-                    : value;
-
-                valueMightNeedDecoding = false;
-                j = i;
-                for (; j < len; ++j) {
-                    if (str.charCodeAt(j) !== SPACE) {
-                        i = j - 1;
-                        break;
-                    }
-                }
-                keyEnd = keyStart = i + 1;
-                mode = KEY;
             }
             else {
-                valueEnd = i;
+                valueEnd = j - 1;
             }
-            break;
-        }
-    }
 
-    if (mode !== KEY) {
-        if (mode === STRING) {
-            var j = trimBackward(str, i - 1);
-            valueEnd = j - 1;
-            if(valueEnd < valueStart) valueStart = valueEnd;
-        }
-        var key = extract(str, keyStart, keyEnd);
-        var value = extract(str, valueStart, valueEnd);
+            var key = extract(str, keyStart, keyEnd);
+            var value = extract(str, valueStart, valueEnd);
 
-        dictionary[key] = valueMightNeedDecoding
-            ? decode(value)
-            : value;
+            dictionary[key] = valueMightNeedDecoding
+                ? decode(value)
+                : value;
+            i = j;
+        }
+        else if (ch === SCOLON ||
+            ch === COMMA) {
+            keyStart = i + 1;
+        }
+
     }
     return dictionary;
 }
-
-
-
 
 module.exports = {
     parse: parse,
@@ -184,17 +150,17 @@ https://github.com/defunctzombie/node-cookie/
 */
 function serialize(name, val, opt) {
     opt = opt || {};
-    var enc = opt.encode || encode;
-    var pairs = [name + '=' + enc(val)];
+    var enc = opt.encode || encodeURIComponent;
+    var pairs = [name + "=" + enc(val)];
 
-    if (opt.maxAge) pairs.push('Max-Age=' + opt.maxAge);
-    if (opt.domain) pairs.push('Domain=' + opt.domain);
-    if (opt.path) pairs.push('Path=' + opt.path);
-    if (opt.expires) pairs.push('Expires=' + opt.expires.toUTCString());
-    if (opt.httpOnly) pairs.push('HttpOnly');
-    if (opt.secure) pairs.push('Secure');
+    if (opt.maxAge) pairs.push("Max-Age=" + opt.maxAge);
+    if (opt.domain) pairs.push("Domain=" + opt.domain);
+    if (opt.path) pairs.push("Path=" + opt.path);
+    if (opt.expires) pairs.push("Expires=" + opt.expires.toUTCString());
+    if (opt.httpOnly) pairs.push("HttpOnly");
+    if (opt.secure) pairs.push("Secure");
 
-    return pairs.join('; ');
+    return pairs.join("; ");
 }
 function slowParse(str, dec) {
     var obj = {};

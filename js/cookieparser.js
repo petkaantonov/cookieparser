@@ -39,7 +39,6 @@ function extract(str, start, end) {
 }
 
 function trimForward(str, i) {
-
     var ch = str.charCodeAt(i);
     while (isWhiteSpace(ch)) {
         ch = str.charCodeAt(++i);
@@ -65,7 +64,6 @@ function parse(str) {
         throw new TypeError("str must be a string (Cookie parser)");
     }
 
-
     if (arguments.length > 1) {
         var opt = arguments[1];
         if (typeof opt === "object" && opt !== null &&
@@ -80,118 +78,84 @@ function parse(str) {
     var valueStart = 0;
     var valueEnd = 0;
     var valueMightNeedDecoding = false;
-    var mode = 1;
+    var isQuote = false;
     var i = 0;
-
-    for( var len = str.length; i < len; ++i ) {
+    var len = str.length;
+    mainloop: for (; i < len; ++i ) {
         var ch = str.charCodeAt(i);
         if (ch > 127) {
             return slowParse(str, decode);
         }
-        switch(mode) {
-        case 1:
-            if (ch === 61) {
-                mode = 2;
-            }
-            else if (ch === 59 ||
-                     ch === 44) {
-                keyEnd = keyStart = i + 1;
-            }
-            else {
-                keyEnd = i;
-            }
-            break;
-
-        case 2:
-            valueStart = valueEnd = i;
+        else if (ch === 61) {
+            keyEnd = i - 1;
+            var j = i + 1;
+            ch = str.charCodeAt(j);
             if (ch === 34) {
-                valueStart = valueEnd = i + 1;
-                mode = 4;
-                break;
+                j++;
+                isQuote = true;
             }
-            mode = 3;
-        case 3:
-            if (ch === 37) {
-                valueMightNeedDecoding = true;
-            }
-            if (ch === 59 ||
-                ch === 44) {
-                var key = extract(str, keyStart, keyEnd);
-                var value = extract(str, valueStart, valueEnd);
-
-                dictionary[key] = valueMightNeedDecoding
-                    ? decode(value)
-                    : value;
-                valueMightNeedDecoding = false;
-                var j = i;
-                for (; j < len; ++j) {
-                    if (str.charCodeAt(j) !== 32) {
-                        i = j - 1;
-                        break;
-                    }
+            valueStart = j;
+            for(; j < len; ++j) {
+                ch = str.charCodeAt(j);
+                if( ch === 37 ) {
+                    valueMightNeedDecoding = true;
                 }
-                keyEnd = keyStart = i + 1;
-                mode = 1;
-            }
-            else {
-                valueEnd = i;
-            }
-            break;
+                else if (ch === 59 ||
+                        ch === 44) {
+                    if (isQuote) {
+                        var k = trimBackward(str, j - 1);
+                        valueEnd = k - 1;
+                        if(valueEnd < valueStart) valueStart = valueEnd;
+                    }
+                    else {
+                        valueEnd = j - 1;
+                    }
 
-        case 4:
-            if (ch === 37) {
-                valueMightNeedDecoding = true;
+                    var key = extract(str, keyStart, keyEnd);
+                    var value = extract(str, valueStart, valueEnd);
+
+                    dictionary[key] = valueMightNeedDecoding
+                        ? decode(value)
+                        : value;
+
+                    i = j;
+                    for (; j < len; ++j) {
+                        if (str.charCodeAt(j) !== 32) {
+                            i = j - 1;
+                            break;
+                        }
+                    }
+                    keyEnd = keyStart = i + 1;
+                    isQuote = false;
+                    valueMightNeedDecoding = false;
+                    continue mainloop;
+                }
+
             }
-            if (ch === 59 ||
-                ch === 44) {
-                var j = trimBackward(str, i - 1);
-                valueEnd = j - 1;
+            if (isQuote) {
+                var k = trimBackward(str, j - 1);
+                valueEnd = k - 1;
                 if(valueEnd < valueStart) valueStart = valueEnd;
-
-                var key = extract(str, keyStart, keyEnd);
-                var value = extract(str, valueStart, valueEnd);
-
-                dictionary[key] = valueMightNeedDecoding
-                    ? decode(value)
-                    : value;
-
-                valueMightNeedDecoding = false;
-                j = i;
-                for (; j < len; ++j) {
-                    if (str.charCodeAt(j) !== 32) {
-                        i = j - 1;
-                        break;
-                    }
-                }
-                keyEnd = keyStart = i + 1;
-                mode = 1;
             }
             else {
-                valueEnd = i;
+                valueEnd = j - 1;
             }
-            break;
-        }
-    }
 
-    if (mode !== 1) {
-        if (mode === 4) {
-            var j = trimBackward(str, i - 1);
-            valueEnd = j - 1;
-            if(valueEnd < valueStart) valueStart = valueEnd;
-        }
-        var key = extract(str, keyStart, keyEnd);
-        var value = extract(str, valueStart, valueEnd);
+            var key = extract(str, keyStart, keyEnd);
+            var value = extract(str, valueStart, valueEnd);
 
-        dictionary[key] = valueMightNeedDecoding
-            ? decode(value)
-            : value;
+            dictionary[key] = valueMightNeedDecoding
+                ? decode(value)
+                : value;
+            i = j;
+        }
+        else if (ch === 59 ||
+            ch === 44) {
+            keyStart = i + 1;
+        }
+
     }
     return dictionary;
-}
-
-
-function serialize() {
-
 }
 
 module.exports = {
@@ -199,6 +163,20 @@ module.exports = {
     serialize: serialize
 };
 
+function serialize(name, val, opt) {
+    opt = opt || {};
+    var enc = opt.encode || encodeURIComponent;
+    var pairs = [name + "=" + enc(val)];
+
+    if (opt.maxAge) pairs.push("Max-Age=" + opt.maxAge);
+    if (opt.domain) pairs.push("Domain=" + opt.domain);
+    if (opt.path) pairs.push("Path=" + opt.path);
+    if (opt.expires) pairs.push("Expires=" + opt.expires.toUTCString());
+    if (opt.httpOnly) pairs.push("HttpOnly");
+    if (opt.secure) pairs.push("Secure");
+
+    return pairs.join("; ");
+}
 function slowParse(str, dec) {
     var obj = {};
     var pairs = str.split(/[;,] */);
