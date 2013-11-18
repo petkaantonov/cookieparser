@@ -7,36 +7,14 @@ function decode(str) {
     }
 }
 
-/* jshint maxparams: 7 */
-function placeKeyValue(str, dictionary, keyStart,
-    keyEnd, valueStart, valueEnd, valueMightNeedDecoding) {
-
-
-    var key = keyStart === keyEnd ? "" :
-        str.substring(
-            trimForward(str, keyStart),
-            trimBackward(str, keyEnd) + 1
-        );
-    var value = valueStart === valueEnd ? "" :
-        str.substring(
-            trimForward(str, valueStart),
-            trimBackward(str, valueEnd) + 1
-        );
-
-    if( void 0 === dictionary[key] ) {
-        dictionary[key] = valueMightNeedDecoding
-            ? decode(value)
-            : value;
+function extract(str, start, end) {
+    if( start === end + 1) {
+        return "";
     }
-}
-
-function eatSpace(str, i) {
-    for (var len = str.length; i < len; ++i) {
-        if (str.charCodeAt(i) !== SPACE) {
-            return i - 1;
-        }
-    }
-    return i;
+    return str.slice(
+        trimForward(str, start),
+        trimBackward(str, end) + 1
+    );
 }
 
 function trimForward(str, i) {
@@ -45,6 +23,7 @@ function trimForward(str, i) {
         ch = str.charCodeAt(++i);
     }
     return i;
+
 }
 
 function trimBackward(str, i) {
@@ -118,11 +97,20 @@ function parse(str) {
             }
             if (ch === SCOLON ||
                 ch === COMMA) {
-                placeKeyValue(str, dictionary, keyStart, keyEnd,
-                    valueStart, valueEnd, valueMightNeedDecoding);
+                var key = extract(str, keyStart, keyEnd);
+                var value = extract(str, valueStart, valueEnd);
 
+                dictionary[key] = valueMightNeedDecoding
+                    ? decode(value)
+                    : value;
                 valueMightNeedDecoding = false;
-                i = eatSpace(str, i);
+                var j = i;
+                for (; j < len; ++j) {
+                    if (str.charCodeAt(j) !== SPACE) {
+                        i = j - 1;
+                        break;
+                    }
+                }
                 keyEnd = keyStart = i + 1;
                 mode = KEY;
             }
@@ -141,11 +129,21 @@ function parse(str) {
                 valueEnd = j - 1;
                 if(valueEnd < valueStart) valueStart = valueEnd;
 
-                placeKeyValue(str, dictionary, keyStart, keyEnd,
-                    valueStart, valueEnd, valueMightNeedDecoding);
+                var key = extract(str, keyStart, keyEnd);
+                var value = extract(str, valueStart, valueEnd);
+
+                dictionary[key] = valueMightNeedDecoding
+                    ? decode(value)
+                    : value;
 
                 valueMightNeedDecoding = false;
-                i = eatSpace(str, i);
+                j = i;
+                for (; j < len; ++j) {
+                    if (str.charCodeAt(j) !== SPACE) {
+                        i = j - 1;
+                        break;
+                    }
+                }
                 keyEnd = keyStart = i + 1;
                 mode = KEY;
             }
@@ -162,11 +160,12 @@ function parse(str) {
             valueEnd = j - 1;
             if(valueEnd < valueStart) valueStart = valueEnd;
         }
-        else {
-            valueEnd++;
-        }
-        placeKeyValue(str, dictionary, keyStart, keyEnd,
-                valueStart, valueEnd, valueMightNeedDecoding);
+        var key = extract(str, keyStart, keyEnd);
+        var value = extract(str, valueStart, valueEnd);
+
+        dictionary[key] = valueMightNeedDecoding
+            ? decode(value)
+            : value;
     }
     return dictionary;
 }

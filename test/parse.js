@@ -2,7 +2,12 @@ var assert = require('assert');
 
 var cookie = require('../js/cookieparser.js');
 
-
+/*
+Tests based on node-cookie
+// MIT License
+Copyright (C) Roman Shtylman <shtylman@gmail.com>
+https://github.com/defunctzombie/node-cookie/
+*/
 describe("parse", function() {
 
     specify('basic', function() {
@@ -11,12 +16,13 @@ describe("parse", function() {
     });
 
     specify("basic multiple values", function() {
+        assert.deepEqual({ foo: 'bar', abc: "4" }, cookie.parse('abc=4; foo=bar'));
         assert.deepEqual({ foo: 'bar', abc: "4" }, cookie.parse('foo=bar; abc=4'));
     });
 
     specify('ignore spaces', function() {
         assert.deepEqual({ FOO: 'bar', baz: 'raz' },
-                cookie.parse('FOO    = bar;   baz  =   raz'));
+                cookie.parse('FOO    = bar    ;   baz  =   raz'));
     });
 
     specify('escaping', function() {
