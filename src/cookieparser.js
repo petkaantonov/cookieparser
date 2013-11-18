@@ -43,7 +43,6 @@ function parse(str) {
         throw new TypeError("str must be a string (Cookie parser)");
     }
 
-
     if (arguments.length > 1) {
         var opt = arguments[1];
         if (typeof opt === "object" && opt !== null &&
@@ -171,9 +170,7 @@ function parse(str) {
 }
 
 
-function serialize() {
 
-}
 
 module.exports = {
     parse: parse,
@@ -185,6 +182,20 @@ module.exports = {
 Copyright (C) Roman Shtylman <shtylman@gmail.com>
 https://github.com/defunctzombie/node-cookie/
 */
+function serialize(name, val, opt) {
+    opt = opt || {};
+    var enc = opt.encode || encode;
+    var pairs = [name + '=' + enc(val)];
+
+    if (opt.maxAge) pairs.push('Max-Age=' + opt.maxAge);
+    if (opt.domain) pairs.push('Domain=' + opt.domain);
+    if (opt.path) pairs.push('Path=' + opt.path);
+    if (opt.expires) pairs.push('Expires=' + opt.expires.toUTCString());
+    if (opt.httpOnly) pairs.push('HttpOnly');
+    if (opt.secure) pairs.push('Secure');
+
+    return pairs.join('; ');
+}
 function slowParse(str, dec) {
     var obj = {};
     var pairs = str.split(/[;,] */);
