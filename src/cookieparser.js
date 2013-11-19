@@ -70,6 +70,10 @@ function parse(str) {
             keyEnd = i - 1;
             var j = i + 1;
             ch = str.charCodeAt(j);
+            while(ch === SPACE) {
+                j++;
+                ch = str.charCodeAt(j);
+            }
             if (ch === QUOTE) {
                 j++;
                 isQuote = true;

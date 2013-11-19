@@ -10,6 +10,8 @@ https://github.com/defunctzombie/node-cookie/
 */
 describe("parse", function() {
 
+    var foobar = { FOO: 'bar', baz: 'raz' };
+
     specify('basic', function() {
         assert.deepEqual({ foo: 'bar' }, cookie.parse('foo=bar'));
         assert.deepEqual({ foo: '123' }, cookie.parse('foo=123'));
@@ -21,8 +23,26 @@ describe("parse", function() {
     });
 
     specify('ignore spaces', function() {
-        assert.deepEqual({ FOO: 'bar', baz: 'raz' },
-                cookie.parse('FOO    = bar    ;   baz  =   raz'));
+        assert.deepEqual(
+            foobar,
+            cookie.parse('FOO    = bar    ;   baz  =   raz')
+        );
+        assert.deepEqual(
+            foobar,
+            cookie.parse("    f     ;      FOO    =   bar;  ; f ; baz = raz")
+        );
+        assert.deepEqual(
+            foobar,
+            cookie.parse("    f     ;      FOO    =   \"bar\"     ;  ; f ; baz =\"raz\"    ")
+        );
+        assert.deepEqual(
+            foobar,
+            cookie.parse("    f     ;      FOO    =   \"bar\"     ;  ; f ; baz =    \"raz\"    ")
+        );
+        assert.deepEqual(
+            foobar,
+            cookie.parse("    f     ;      FOO    =      \"bar\";  ; f ; baz =    \"raz\"    ")
+        );
     });
 
     specify('escaping', function() {

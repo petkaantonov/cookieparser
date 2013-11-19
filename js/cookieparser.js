@@ -90,6 +90,10 @@ function parse(str) {
             keyEnd = i - 1;
             var j = i + 1;
             ch = str.charCodeAt(j);
+            while(ch === 32) {
+                j++;
+                ch = str.charCodeAt(j);
+            }
             if (ch === 34) {
                 j++;
                 isQuote = true;
