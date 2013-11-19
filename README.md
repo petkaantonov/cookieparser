@@ -1,6 +1,19 @@
 [![Build Status](https://travis-ci.org/petkaantonov/cookieparser.png?branch=master)](https://travis-ci.org/petkaantonov/cookieparser)
 
+#Introduction
+
 Fast cookie parser.
+
+#Quick start
+
+    npm install cookieparser
+
+```js
+var cookieparser = require("cookieparser");
+cookieparser.parse("foo=bar");
+```
+
+#Performance
 
 Platform info:
 
