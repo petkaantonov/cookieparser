@@ -1,7 +1,7 @@
 {
   "name": "cookieparser",
   "description": "cookieparser",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "keywords": [
     "cookie",
     "parse",
