@@ -19,59 +19,80 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-function decode(str) {
+"use strict";
+module.exports = CookieParser;
+
+function CookieParser() {
+
+}
+
+CookieParser.maxLength = 4096;
+
+CookieParser.parse = function(str) {
+    var maxLength = CookieParser.maxLength;
+
+    if (typeof str !== "string") {
+        throw new TypeError("str must be a string");
+    }
+
+    if (str.length > maxLength) {
+        throw new RangeError("str is too large " +
+            "(CookieParser.maxLength="+maxLength+")");
+    }
+    var cookieParser = new CookieParser();
+    if (arguments.length > 1) {
+        var opt = arguments[1];
+        if (typeof opt === "object" && opt !== null &&
+            typeof opt.decode === "function") {
+            return cookieParser.slowParse(str, opt.decode);
+        }
+    }
+    return cookieParser.parse(str);
+};
+
+CookieParser.prototype.decode = function CookieParser$decode(str) {
     try {
         return decodeURIComponent(str);
     }
     catch(e) {
         return str;
     }
-}
+};
 
-function extract(str, start, end) {
+CookieParser.prototype.extract =
+function CookieParser$extract(str, start, end) {
     if( start === end + 1) {
         return "";
     }
     return str.slice(
-        trimForward(str, start),
-        trimBackward(str, end) + 1
+        this.trimForward(str, start),
+        this.trimBackward(str, end) + 1
     );
-}
+};
 
-function trimForward(str, i) {
+CookieParser.prototype.trimForward =
+function CookieParser$trimForward(str, i) {
     var ch = str.charCodeAt(i);
-    while (isWhiteSpace(ch)) {
+    while (this.isWhiteSpace(ch)) {
         ch = str.charCodeAt(++i);
     }
     return i;
+};
 
-}
-
-function trimBackward(str, i) {
+CookieParser.prototype.trimBackward =
+function CookieParser$trimBackward(str, i) {
     var ch = str.charCodeAt(i);
-    while (isWhiteSpace(ch)) {
+    while (this.isWhiteSpace(ch)) {
         ch = str.charCodeAt(--i);
     }
     return i;
-}
+};
 
-function isWhiteSpace(ch) {
+CookieParser.prototype.isWhiteSpace = function CookieParser$isWhiteSpace(ch) {
     return ch <= 32;
-}
+};
 
-function parse(str) {
-    if (typeof str !== "string") {
-        throw new TypeError("str must be a string (Cookie parser)");
-    }
-
-    if (arguments.length > 1) {
-        var opt = arguments[1];
-        if (typeof opt === "object" && opt !== null &&
-            typeof opt.decode === "function") {
-            return slowParse(str, opt.decode);
-        }
-    }
-
+CookieParser.prototype.parse = function CookieParser$parse(str) {
     var dictionary = {};
     var keyStart = 0;
     var keyEnd = 0;
@@ -84,7 +105,7 @@ function parse(str) {
     mainloop: for (; i < len; ++i ) {
         var ch = str.charCodeAt(i);
         if (ch > 127) {
-            return slowParse(str, decode);
+            return this.slowParse(str, this.decode);
         }
         else if (ch === 61) {
             keyEnd = i - 1;
@@ -107,7 +128,7 @@ function parse(str) {
                 else if (ch === 59 ||
                         ch === 44) {
                     if (isQuote) {
-                        var k = trimBackward(str, j - 1);
+                        var k = this.trimBackward(str, j - 1);
                         valueEnd = k - 1;
                         if(valueEnd < valueStart) valueStart = valueEnd;
                     }
@@ -115,11 +136,11 @@ function parse(str) {
                         valueEnd = j - 1;
                     }
 
-                    var key = extract(str, keyStart, keyEnd);
-                    var value = extract(str, valueStart, valueEnd);
+                    var key = this.extract(str, keyStart, keyEnd);
+                    var value = this.extract(str, valueStart, valueEnd);
 
                     dictionary[key] = valueMightNeedDecoding
-                        ? decode(value)
+                        ? this.decode(value)
                         : value;
 
                     i = j;
@@ -137,7 +158,7 @@ function parse(str) {
 
             }
             if (isQuote) {
-                var k = trimBackward(str, j - 1);
+                var k = this.trimBackward(str, j - 1);
                 valueEnd = k - 1;
                 if(valueEnd < valueStart) valueStart = valueEnd;
             }
@@ -145,11 +166,11 @@ function parse(str) {
                 valueEnd = j - 1;
             }
 
-            var key = extract(str, keyStart, keyEnd);
-            var value = extract(str, valueStart, valueEnd);
+            var key = this.extract(str, keyStart, keyEnd);
+            var value = this.extract(str, valueStart, valueEnd);
 
             dictionary[key] = valueMightNeedDecoding
-                ? decode(value)
+                ? this.decode(value)
                 : value;
             i = j;
         }
@@ -160,14 +181,9 @@ function parse(str) {
 
     }
     return dictionary;
-}
-
-module.exports = {
-    parse: parse,
-    serialize: serialize
 };
 
-function serialize(name, val, opt) {
+CookieParser.serialize = function CookieParser$Serialize(name, val, opt) {
     opt = opt || {};
     var enc = opt.encode || encodeURIComponent;
     var pairs = [name + "=" + enc(val)];
@@ -180,8 +196,9 @@ function serialize(name, val, opt) {
     if (opt.secure) pairs.push("Secure");
 
     return pairs.join("; ");
-}
-function slowParse(str, dec) {
+};
+
+CookieParser.prototype.slowParse = function CookieParser$slowParse(str, dec) {
     var obj = {};
     var pairs = str.split(/[;,] */);
 
@@ -209,4 +226,4 @@ function slowParse(str, dec) {
     });
 
     return obj;
-}
+};

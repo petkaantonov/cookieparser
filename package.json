@@ -37,7 +37,8 @@
     "mocha": "~1.12.1",
     "grunt-cli": "~0.1.9",
     "cookie": "latest",
-    "benchmark": "latest"
+    "benchmark": "latest",
+    "expect.js": "latest"
   },
   "readmeFilename": "README.md",
   "main": "./js/cookieparser.js"

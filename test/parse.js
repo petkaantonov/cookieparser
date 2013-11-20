@@ -71,6 +71,28 @@ describe("parse", function() {
                 cookie.parse('email=%20%22%2c%3b%2f',{
                     decode: function(value) { return value; }
                 }));
-    })
+    });
+
+    specify("Doesn't accept large input", function() {
+        var str = new Array(13500).join("n");
+        try {
+            cookie.parse(str);
+            assert.fail();
+        }
+        catch(e) {
+            assert(e instanceof RangeError);
+        }
+    });
+
+    specify("Doesn't accept wrong input", function() {
+        try {
+            cookie.parse({});
+            assert.fail();
+        }
+        catch(e) {
+            assert(e instanceof TypeError);
+        }
+    });
+
 
 });
